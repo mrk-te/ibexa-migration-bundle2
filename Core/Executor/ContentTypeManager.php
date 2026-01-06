@@ -519,23 +519,11 @@ class ContentTypeManager extends RepositoryExecutor implements MigrationGenerato
                         $attributes[] = $this->fieldDefinitionToHash($contentType, $fieldDefinition, $context);
                     }
 
-                    // Fix for nulls returned in descriptions serialization, which are not accepted at contentType creation.
-                    /// @todo Remove when this does not happen any more
-                    ///       (q: when did this start happening? It does not seem to be the case for eg. eZP 2.5...)
-                    $descriptions = $contentType->getDescriptions();
-                    if (is_array($descriptions)) {
-                        foreach ($descriptions as &$description) {
-                            if (is_null($description)) {
-                                $description = "";
-                            }
-                        }
-                    }
-
                     $contentTypeData = array_merge(
                         $contentTypeData,
                         array(
                             'name' => $contentType->getNames(),
-                            'description' => $descriptions,
+                            'description' => $this->fixNullDescriptions($contentType->getDescriptions()),
                             'name_pattern' => $contentType->nameSchema,
                             'url_name_pattern' => $contentType->urlAliasSchema,
                             'is_container' => $contentType->isContainer,
@@ -580,7 +568,7 @@ class ContentTypeManager extends RepositoryExecutor implements MigrationGenerato
             'identifier' => $fieldDefinition->identifier,
             'type' => $fieldTypeIdentifier,
             'name' => $fieldDefinition->getNames(),
-            'description' => $fieldDefinition->getDescriptions(),
+            'description' => $this->fixNullDescriptions($fieldDefinition->getDescriptions()),
             'required' => $fieldDefinition->isRequired,
             'searchable' => $fieldDefinition->isSearchable,
             'info-collector' => $fieldDefinition->isInfoCollector,
@@ -840,5 +828,20 @@ class ContentTypeManager extends RepositoryExecutor implements MigrationGenerato
         }
 
         /// @todo log a warning if the conteType is not in the specified group
+    }
+
+    protected function fixNullDescriptions($descriptions)
+    {
+        // Fix for nulls returned in descriptions serialization, which are not accepted at contentType creation.
+        /// @todo Remove when this does not happen any more
+        ///       (q: when did this start happening? It does not seem to be the case for eg. eZP 2.5...)
+        if (is_array($descriptions)) {
+            foreach ($descriptions as &$description) {
+                if (is_null($description)) {
+                    $description = "";
+                }
+            }
+        }
+        return $descriptions;
     }
 }

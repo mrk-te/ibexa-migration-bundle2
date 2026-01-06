@@ -1,3 +1,8 @@
+Version: 1.0.7
+==============
+
+* Fixed: Content type descriptions are not nullable. Ensure descriptions are always strings on fields to (#4).
+
 Version: 1.0.6
 ==============
 
