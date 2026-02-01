@@ -19,8 +19,29 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
         private readonly ?Type $type,
         private readonly ?ContentService $contentService,
         private readonly ?LocationService $locationService,
-    )
+    ) {
+    }
+
+    /**
+     * @return array<string, callable(mixed $value): mixed>
+     */
+    private function getFieldValueToHashCallackBySimpleValueType(): array
     {
+        return [
+            'embed' => $this->replaceContentIdByRemoteId(...),
+            'locationlist' => $this->replaceLocationIdListStringByRemoteIdList(...),
+        ];
+    }
+
+    /**
+     * @return array<string, callable(mixed $value): mixed>
+     */
+    private function getHashToFieldValueCallackBySimpleValueType(): array
+    {
+        return [
+            'embed' => $this->replacePotentialRemoteIdByContentId(...),
+            'locationlist' => $this->replacePotentialLocationRemoteIdListByLocationListString(...),
+        ];
     }
 
     /**
@@ -40,16 +61,24 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
             throw new \DomainException('Bad value type');
         }
 
-        $hash = $this->getFieldHashWithSomeValueTypeModified(
-            $this->type->toHash($fieldValue),
-            'embed',
-            $this->replaceContentIdByRemoteId(...)
-        );
+        $hash = $this->type->toHash($fieldValue);
+        foreach ($this->getFieldValueToHashCallackBySimpleValueType() as $valueType => $callback) {
+            $hash = $this->getFieldHashWithSomeValueTypeModified(
+                $hash,
+                $valueType,
+                $callback
+            );
+        }
 
         return $this->getFieldHashWithSomeValueTypeModified(
             $hash,
-            'locationlist',
-            $this->replaceLocationIdListStringByRemoteIdList(...)
+            'nested_attribute',
+            fn(?string $value, string $blockIdentifier, string $attributeIdentifier) => $this->replaceSimpleValueTypeOnNestedAttributes(
+                $this->getFieldValueToHashCallackBySimpleValueType(),
+                $value,
+                $blockIdentifier,
+                $attributeIdentifier
+            ),
         );
     }
 
@@ -57,7 +86,7 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
      * Converts the Content Field value as gotten from the migration definition into something the repo can understand
      *
      * @param mixed $fieldHash The Content Field value hash as gotten from the migration definition
-     * @param array $context The context for execution of the current migrations. Contains f.e. the path to the migration
+     * @param array $context   The context for execution of the current migrations. Contains f.e. the path to the migration
      * @return mixed the obj usable as field value in a Content create/update struct
      */
     public function hashToFieldValue($fieldHash, array $context = array()): Value
@@ -74,15 +103,23 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
             throw new \DomainException('Bad value type');
         }
 
+        foreach ($this->getHashToFieldValueCallackBySimpleValueType() as $valueType => $callback) {
+            $fieldHash = $this->getFieldHashWithSomeValueTypeModified(
+                $fieldHash,
+                $valueType,
+                $callback
+            );
+        }
+
         $fieldHash = $this->getFieldHashWithSomeValueTypeModified(
             $fieldHash,
-            'embed',
-            $this->replacePotentialRemoteIdByContentId(...)
-        );
-        $fieldHash = $this->getFieldHashWithSomeValueTypeModified(
-            $fieldHash,
-            'locationlist',
-            $this->replacePotentialLocationRemoteIdListByLocationListString(...)
+            'nested_attribute',
+            fn(?string $value, string $blockIdentifier, string $attributeIdentifier) => $this->replaceSimpleValueTypeOnNestedAttributes(
+                $this->getHashToFieldValueCallackBySimpleValueType(),
+                $value,
+                $blockIdentifier,
+                $attributeIdentifier
+            ),
         );
 
         return $this->type->fromHash($fieldHash);
@@ -125,7 +162,7 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
             return null;
         }
         return array_map(
-            fn (string $locationId) => $this->replaceLocationIdByLocationRemoteId($locationId),
+            fn(string $locationId) => $this->replaceLocationIdByLocationRemoteId($locationId),
             explode(',', $value)
         );
     }
@@ -143,7 +180,7 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
         }
 
         if (is_array($value)) {
-            return implode(',', array_map(fn ($locationRemoteId) => $this->replaceLocationRemoteIdByLocationId($locationRemoteId), $value));
+            return implode(',', array_map(fn($locationRemoteId) => $this->replaceLocationRemoteIdByLocationId($locationRemoteId), $value));
         }
 
         return $value;
@@ -168,6 +205,48 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
         return $this->locationService->loadLocationByRemoteId($value)->id;
     }
 
+    /**
+     * @param array<string, callable(mixed $value): mixed> $callbackBySimpleValueType
+     * @param string|null                                  $value
+     * @param string                                       $blockIdentifier
+     * @param string                                       $attributeIdentifier
+     * @return string|null
+     */
+    private function replaceSimpleValueTypeOnNestedAttributes(array $callbackBySimpleValueType, ?string $value, string $blockIdentifier, string $attributeIdentifier): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        $data = json_decode($value, true);
+
+        foreach ($callbackBySimpleValueType as $valueType => $callback) {
+            $data = $this->getFieldValueWithSomeValueTypeModified(
+                $data,
+                $blockIdentifier,
+                $attributeIdentifier,
+                $valueType,
+                $callback
+            );
+        }
+
+        return json_encode($data);
+    }
+
+    private function getFieldValueWithSomeValueTypeModified(array $valueHash, string $blockIdentifier, string $attributeIdentifier, string $someValueType, mixed $callback): array
+    {
+        $attributesToHandle = $this->getSomeValueTypeAttributesByNestedAttribute($someValueType, $blockIdentifier, $attributeIdentifier);
+        foreach ($valueHash['attributes'] as &$parentAttributes) {
+            foreach($parentAttributes as $attributeIdentifier => &$attribute) {
+                if (in_array($attributeIdentifier, $attributesToHandle, true)) {
+                    $attribute['value'] = $callback($attribute['value']);
+                }
+            }
+        }
+
+        return $valueHash;
+    }
+
     private function getFieldHashWithSomeValueTypeModified(array $fieldHash, string $someValueType, mixed $callback): array
     {
         $someTypeAttributesByBlockIdentifier = $this->getSomeValueTypeAttributesByBlockIdentifier($someValueType);
@@ -189,7 +268,7 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
                 $attributeNameToHandle = $someTypeAttributesByBlockIdentifier[$blockInfo['type']];
                 foreach ($blockInfo['attributes'] as &$attribute) {
                     if (in_array($attribute['name'] ?? null, $attributeNameToHandle, true)) {
-                        $attribute['value'] = $callback($attribute['value']);
+                        $attribute['value'] = $callback($attribute['value'], $blockInfo['type'], $attribute['name']);
                     }
                 }
             }
@@ -197,6 +276,7 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
 
         return $fieldHash;
     }
+
     private function getSomeValueTypeAttributesByBlockIdentifier(string $someValueType): array
     {
         static $someValueTypeAttributesByBlockIdentifierBySomeValueType = [];
@@ -219,5 +299,36 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
         }
 
         return $someValueTypeAttributesByBlockIdentifierBySomeValueType[$someValueType];
+    }
+
+    private function getSomeValueTypeAttributesByNestedAttribute(string $someValueType, string $targetBlockIdentifier, string $targetAttributeIdentifier): array
+    {
+        static $someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType = [];
+        if (isset($someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType])) {
+            return $someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType][$targetBlockIdentifier][$targetAttributeIdentifier] ?? [];
+        }
+
+        $someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType] = [];
+
+        $blockDefinition = $this->blockDefinitionFactory->getConfiguration();
+        foreach ($blockDefinition as $blockIdentifier => $config) {
+            foreach ($config['attributes'] ?? [] as $attributeIdentifier => $attributeInfo) {
+                if ($attributeInfo['type'] === 'nested_attribute') {
+                    if (!isset($someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType][$blockIdentifier])) {
+                        $someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType][$blockIdentifier] = [];
+                    }
+                    foreach ($attributeInfo['options']['attributes'] ?? [] as $subAttributeIdentifier => $subAttributeInfo) {
+                        if ($subAttributeInfo['type'] === $someValueType) {
+                            if (!isset($someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType][$blockIdentifier][$attributeIdentifier])) {
+                                $someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType][$blockIdentifier][$attributeIdentifier] = [];
+                            }
+                            $someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType][$blockIdentifier][$attributeIdentifier][] = $subAttributeIdentifier;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType][$targetBlockIdentifier][$targetAttributeIdentifier] ?? [];
     }
 }
