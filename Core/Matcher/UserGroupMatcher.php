@@ -38,7 +38,7 @@ class UserGroupMatcher extends RepositoryMatcher implements KeyMatcherInterface
      */
     public function match(array $conditions, $tolerateMisses = false)
     {
-        return $this->matchUserGroup($conditions);
+        return $this->matchUserGroup($conditions, $tolerateMisses);
     }
 
     /**
