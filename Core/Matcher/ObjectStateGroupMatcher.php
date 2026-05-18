@@ -33,7 +33,7 @@ class ObjectStateGroupMatcher extends RepositoryMatcher implements KeyMatcherInt
      */
     public function match(array $conditions, $tolerateMisses = false)
     {
-        return $this->matchObjectStateGroup($conditions);
+        return $this->matchObjectStateGroup($conditions, $tolerateMisses);
     }
 
     protected function getConditionsFromKey($key)
