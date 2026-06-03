@@ -30,6 +30,7 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
         return [
             'embed' => $this->replaceContentIdByRemoteId(...),
             'locationlist' => $this->replaceLocationIdListStringByRemoteIdList(...),
+            'richtext' => $this->replaceRichtextContentIdReferenceByRemoteIdReference(...),
         ];
     }
 
@@ -41,6 +42,7 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
         return [
             'embed' => $this->replacePotentialRemoteIdByContentId(...),
             'locationlist' => $this->replacePotentialLocationRemoteIdListByLocationListString(...),
+            'richtext' => $this->replaceRichtextRemoteIdReferenceByContentIdReference(...),
         ];
     }
 
@@ -330,5 +332,46 @@ class IbexaLandingPage extends AbstractFieldHandler implements FieldValueConvert
         }
 
         return $someValueTypeAttributesByNestedAttributeByBlockIdentifierBySomeValueType[$someValueType][$targetBlockIdentifier][$targetAttributeIdentifier] ?? [];
+    }
+
+    /**
+     * @throws NotFoundException
+     * @throws UnauthorizedException
+     */
+    private function replaceRichtextContentIdReferenceByRemoteIdReference(string|null $value): string|null
+    {
+        if (!$value) {
+            return $value;
+        }
+        return preg_replace_callback(
+            '/ezcontent:\/\/(\d+)/',
+            function (array $matches): string {
+                $remoteId = $this->contentService->loadContentInfo((int) $matches[1])->remoteId;
+                return 'ezcontent://' . $remoteId;
+            },
+            $value
+        );
+    }
+
+    /**
+     * @throws NotFoundException
+     * @throws UnauthorizedException
+     */
+    private function replaceRichtextRemoteIdReferenceByContentIdReference(string|null $value): string|null
+    {
+        if (!$value) {
+            return $value;
+        }
+        return preg_replace_callback(
+            '/ezcontent:\/\/([^"\'<>]+)/',
+            function (array $matches): string {
+                if (ctype_digit($matches[1])) {
+                    return $matches[0];
+                }
+                $contentId = $this->contentService->loadContentInfoByRemoteId($matches[1])->id;
+                return 'ezcontent://' . $contentId;
+            },
+            $value
+        );
     }
 }
