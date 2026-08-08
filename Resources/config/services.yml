@@ -112,6 +112,7 @@ parameters:
     kaliop_migration_bundle.complex_field.ibexa_image.class: Kaliop\IbexaMigrationBundle\Core\FieldHandler\IbexaImage
     kaliop_migration_bundle.complex_field.ibexa_matrix.class: Kaliop\IbexaMigrationBundle\Core\FieldHandler\IbexaMatrix
     kaliop_migration_bundle.complex_field.ibexa_media.class: Kaliop\IbexaMigrationBundle\Core\FieldHandler\IbexaMedia
+    kaliop_migration_bundle.complex_field.ibexa_landing_page.class: Kaliop\IbexaMigrationBundle\Core\FieldHandler\IbexaLandingPage
     #kaliop_migration_bundle.complex_field.ezpage.class: Kaliop\IbexaMigrationBundle\Core\FieldHandler\EzPage
     kaliop_migration_bundle.complex_field.ezrelation.class: Kaliop\IbexaMigrationBundle\Core\FieldHandler\IbexaRelation
     kaliop_migration_bundle.complex_field.ezrelationlist.class: Kaliop\IbexaMigrationBundle\Core\FieldHandler\IbexaRelationList
@@ -729,6 +730,17 @@ services:
             - "@?ibexa.field_type.ibexa_binaryfile.io_service"
         tags:
             - { name: kaliop_migration_bundle.complex_field, fieldtype: ibexa_media, priority: 0 }
+
+    kaliop_migration_bundle.complex_field.ibexa_landing_page:
+        parent: kaliop_migration_bundle.complex_field
+        class: '%kaliop_migration_bundle.complex_field.ibexa_landing_page.class%'
+        arguments:
+            - "@?Ibexa\\FieldTypePage\\FieldType\\Page\\Block\\Definition\\BlockDefinitionFactory"
+            - "@?Ibexa\\FieldTypePage\\FieldType\\LandingPage\\Type"
+            - "@?Ibexa\\Contracts\\Core\\Repository\\ContentService"
+            - "@?Ibexa\\Contracts\\Core\\Repository\\LocationService"
+        tags:
+            - { name: kaliop_migration_bundle.complex_field, fieldtype: ibexa_landing_page, priority: 0 }
 
     #kaliop_migration_bundle.complex_field.ezpage:
     #    lazy: true

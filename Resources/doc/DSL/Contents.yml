@@ -77,6 +77,9 @@
         attribute18: # nb: the keys must match column identifiers
             - { authors: 'Author A, Author B', title: 'Lorem ipsum', release_info: '2012' }
             - { authors: 'Author 1, Author 2', title: 'Lorem ipsum dolor sit amet', release_info: 'R info abc' }
+        # ibexa_landing_page (Ibexa Experience and  above)
+        attribute19: # nb: When a string is used as an embed block value, a location list, or an ezcontent:// reference in richtext, it is assumed to be a content remote id
+            - { id: '41', name: default, blocks: [{ visible: true, id: '42', type: text_cta, name: 'Text / CTA', view: default, class: null, style: null, compiled: '', since: null, till: null, attributes: [{ id: '43', name: title, value: 'Test' }, { id: '44', name: cta, value: 'my_cta' }] }] }
     always_available: true|false # Optional, will default to content type defaultAlwaysAvailable
     is_hidden: true|false # Optional
     lang: xxx-YY # Optional, will fallback to default language if not provided (--default-language option or 'eng-GB' by default)
