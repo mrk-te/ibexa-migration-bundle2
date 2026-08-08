@@ -13,3 +13,5 @@
 /Tests/dsl/good/references/test_refs_generated.yml
 
 **/.DS_Store
+/.codegraph/
+/notes/

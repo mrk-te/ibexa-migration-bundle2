@@ -5,11 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Version 3.1.0
+## Version 3.2.0
 
 ### Added
 
-* Add match_tolerate_misses support to User and UserGroup migrations
+* #13 feat: Add ibexa_landing_page field handler to allow industrial processes
+
+### Fixed
+
+* #12 fix: Add match_tolerate_misses support to ObjectStateGroupMatcher
+
+
+## Version 3.1.0
+
+### Fixed
+
+* #11 fix: Add match_tolerate_misses support to User and UserGroup migrations
 
 
 ## Version 3.0.0
