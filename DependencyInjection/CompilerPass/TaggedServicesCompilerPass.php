@@ -11,7 +11,7 @@ class TaggedServicesCompilerPass implements CompilerPassInterface
     /**
      * @param ContainerBuilder $container
      */
-    public function process(ContainerBuilder $container)
+    public function process(ContainerBuilder $container): void
     {
         if ($container->has('kaliop_migration_bundle.migration_service')) {
             $migrationService = $container->findDefinition('kaliop_migration_bundle.migration_service');

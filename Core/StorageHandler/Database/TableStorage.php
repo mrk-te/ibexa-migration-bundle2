@@ -75,15 +75,16 @@ abstract class TableStorage
      */
     protected function tableExist($tableName)
     {
-        /** @var \Doctrine\DBAL\Schema\AbstractSchemaManager $sm */
-        $sm = $this->getConnection()->getSchemaManager();
-        foreach ($sm->listTables() as $table) {
-            if ($table->getName() == $tableName) {
-                return true;
-            }
-        }
+        // NB: do NOT use SchemaManager::listTables() here - Symfony's DoctrineBundle installs a
+        //     schema assets filter that hides all tables not managed by Doctrine (eg: all ibexa_*
+        //     tables), which would make this check report the table as missing.
+        $connection = $this->getConnection();
+        $result = $connection->executeQuery(
+            'SELECT 1 FROM information_schema.tables WHERE table_catalog = ? AND table_name = ?',
+            array($connection->getDatabase(), $tableName)
+        )->fetchAssociative();
 
-        return false;
+        return $result !== false;
     }
 
     /**

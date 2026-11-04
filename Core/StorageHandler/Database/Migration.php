@@ -107,7 +107,7 @@ class Migration extends TableStorage implements StorageHandlerInterface
         if ($offset > 0) {
             $qb->setFirstResult($offset);
         }
-        $results = $qb->execute()->fetchAllAssociative();
+        $results = $qb->executeQuery()->fetchAllAssociative();
 
         $migrations = array();
         foreach ($results as $result) {
@@ -129,7 +129,7 @@ class Migration extends TableStorage implements StorageHandlerInterface
         $qb->select($this->fieldList)
             ->from($this->tableName)
             ->where($qb->expr()->eq('migration', $qb->createPositionalParameter($migrationName)));
-        $result = $qb->execute()->fetchAssociative();
+        $result = $qb->executeQuery()->fetchAssociative();
 
         if (is_array($result) && !empty($result)) {
             return $this->arrayToMigration($result);
@@ -434,8 +434,8 @@ class Migration extends TableStorage implements StorageHandlerInterface
     public function createTable()
     {
         /** @var \Doctrine\DBAL\Schema\AbstractSchemaManager $sm */
-        $sm = $this->getConnection()->getSchemaManager();
-        $dbPlatform = $sm->getDatabasePlatform();
+        $sm = $this->getConnection()->createSchemaManager();
+        $dbPlatform = $this->getConnection()->getDatabasePlatform();
 
         $schema = new Schema();
 
