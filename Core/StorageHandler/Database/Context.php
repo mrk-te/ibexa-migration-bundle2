@@ -18,7 +18,7 @@ class Context extends TableStorage implements ContextStorageHandlerInterface
         $qb->select($this->fieldList)
             ->from($this->tableName)
             ->where($qb->expr()->eq('migration', $qb->createPositionalParameter($migrationName)));
-        $result = $qb->execute()->fetchAssociative();
+        $result = $qb->executeQuery()->fetchAssociative();
 
         if (is_array($result) && !empty($result)) {
             return $this->stringToContext($result['context']);
@@ -108,8 +108,8 @@ class Context extends TableStorage implements ContextStorageHandlerInterface
     public function createTable()
     {
         /** @var \Doctrine\DBAL\Schema\AbstractSchemaManager $sm */
-        $sm = $this->connection->getSchemaManager();
-        $dbPlatform = $sm->getDatabasePlatform();
+        $sm = $this->connection->createSchemaManager();
+        $dbPlatform = $this->connection->getDatabasePlatform();
 
         $schema = new Schema();
 

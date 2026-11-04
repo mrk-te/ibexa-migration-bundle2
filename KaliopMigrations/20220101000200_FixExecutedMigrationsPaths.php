@@ -72,15 +72,14 @@ class FixExecutedMigrationsPaths implements MigrationInterface
 
     private function tableExist($tableName)
     {
-        /** @var \Doctrine\DBAL\Schema\AbstractSchemaManager $sm */
-        $sm = $this->connection->getSchemaManager();
-        foreach ($sm->listTables() as $table) {
-            if ($table->getName() == $tableName) {
-                return true;
-            }
-        }
+        // NB: do NOT use SchemaManager::listTables() here - Symfony's DoctrineBundle installs a
+        //     schema assets filter that hides all tables not managed by Doctrine.
+        $result = $this->connection->executeQuery(
+            'SELECT 1 FROM information_schema.tables WHERE table_catalog = ? AND table_name = ?',
+            array($this->connection->getDatabase(), $tableName)
+        )->fetchAssociative();
 
-        return false;
+        return $result !== false;
     }
 
     private function loadAllMigrations()
@@ -89,7 +88,7 @@ class FixExecutedMigrationsPaths implements MigrationInterface
         $q->select('migration, path')
             ->from($this->migrationsTableName)
             ->orderBy('migration', 'ASC');
-        $result = $q->execute();
+        $result = $q->executeQuery();
 
         return $result->fetchAllAssociative();
     }
